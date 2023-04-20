@@ -1,0 +1,57 @@
+# Define the provider
+provider "azurerm" {
+  features {}
+}
+
+# Create a resource group
+module "resource_group" {
+  source              = "terraform-azurerm-resource-group"
+  name                = "my-resource-group"
+  location            = "West US 2"
+  environment         = "dev"
+  naming_convention   = "terraform"
+}
+
+# Create a virtual network
+module "virtual_network" {
+  source              = "terraform-azurerm-virtual-network"
+  name                = "my-virtual-network"
+  address_space       = ["10.0.0.0/16"]
+  location            = module.resource_group.location
+  resource_group_name  = module.resource_group.name
+  environment         = module.resource_group.environment
+  naming_convention   = module.resource_group.naming_convention
+}
+
+# Create a subnet within the virtual network
+module "subnet" {
+  source              = "terraform-azurerm-subnet"
+  name                = "my-subnet"
+  address_prefixes    = ["10.0.1.0/24"]
+  virtual_network_name = module.virtual_network.name
+  resource_group_name  = module.resource_group.name
+}
+
+# Create a network interface
+module "network_interface" {
+  source              = "terraform-azurerm-network-interface"
+  name                = "my-network-interface"
+  location            = module.resource_group.location
+  resource_group_name  = module.resource_group.name
+  subnet_id           = module.subnet.id
+}
+
+# Create a virtual machine
+module "virtual_machine" {
+  source              = "terraform-azurerm-virtual-machine"
+  name                = "my-virtual-machine"
+  location            = module.resource_group.location
+  resource_group_name  = module.resource_group.name
+  network_interface_ids = [module.network_interface.id]
+  admin_username      = "adminuser"
+  admin_password      = "Password1234!"
+  vm_size             = "Standard_B2s"
+  image_publisher     = "Canonical"
+  image_offer         = "UbuntuServer"
+  image_sku           = "18.04-LTS"
+}
